@@ -12,12 +12,14 @@ Self attention defines the relationship of a single element of the sequence to t
     $Kx_0 = w_k * x_0, Kx_1 = w_k * x_1, ...$
 
     $Vx_0 = w_v * x_0, Vx_1 = w_v * x_1, ...$
-5. Calculate the similarity score 
+   
+6. Calculate the similarity score 
 
    $score\_Qx_0 = Qx_0 * Kx_0$
 
    $scores = [score\_Qx_0, ...]$
-6. Take the softmax to get the probabilties and then mutliply it with the value. This results in attention scores. 
+   
+8. Take the softmax to get the probabilties and then mutliply it with the value. This results in attention scores. 
 
    $Attention\_score = softmax(scores) * [Vx_0, ...]$
    
