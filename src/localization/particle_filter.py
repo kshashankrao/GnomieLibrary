@@ -2,6 +2,8 @@ from typing import Tuple
 import numpy as np
 import cv2
 
+from base_filter import BaseFilter
+
 """
 1. Create N particles.
 2. Move the particles according to the measurement + noise --> Prediction
@@ -10,8 +12,8 @@ import cv2
 5. Can be extended to multiple sensor by vectorizing
 """
 
-class ParticleFilter:
-    def __init__(self, map_array: np.ndarray, num_particles: int = 3000) -> None:
+class ParticleFilter(BaseFilter):
+    def __init__(self, map_array: np.ndarray, num_particles: int = 30000) -> None:
         """
         Particle filter for robot localization on a 2D map.
 
@@ -199,27 +201,32 @@ class ParticleFilter:
         cv2.circle(lmap, (int(px), int(py)), 5, (0, 0, 255), 5)
 
         cv2.imshow('map', lmap)
-
+ 
     # ---------------------------------------------------
-    # Main step
+    # Prediction
     # ---------------------------------------------------
-    def step(self, fwd: float, turn: float) -> None:
+    def predict(self, fwd: float, turn: float) -> None:
         """
-        Perform one cycle of motion + measurement update.
+        Prediction step: move the robot and the particles.
 
         Args:
-            fwd (float): Forward motion.
-            turn (float): Turn angle (radians).
+            fwd (float): Forward movement distance.
+            turn (float): Turn angle in radians.
         """
         self.move_robot(fwd, turn)
         self.move_particles(fwd, turn)
 
-        if fwd != 0:
-            robot_sensor = self.sense(self.rx, self.ry, noisy=True)
-            weights = self.compute_weights(robot_sensor)
-            self.resample(weights)
-            self.add_noise()
-
+    # ---------------------------------------------------
+    # Update and correct the measurement
+    # ---------------------------------------------------
+    def update(self) -> None:
+        """
+        Update step: compute weights, resample, and add noise.
+        """
+        robot_sensor = self.sense(self.rx, self.ry, noisy=True)
+        weights = self.compute_weights(robot_sensor)
+        self.resample(weights)
+        self.add_noise() 
         self.display()
 
     # ---------------------------------------------------
@@ -260,7 +267,8 @@ if __name__ == "__main__":
         else:
             fwd, turn = 0, 0
 
-        pf.step(fwd, turn)
+        pf.predict(fwd, turn)
+        pf.update()
 
         # Example: print best estimate
         print("Estimate:", pf.estimate_state())
