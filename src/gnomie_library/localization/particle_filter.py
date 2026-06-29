@@ -2,7 +2,7 @@ from typing import Tuple
 import numpy as np
 import cv2
 
-from base_filter import BaseFilter
+from .base_filter import BaseFilter
 
 """
 1. Create N particles.

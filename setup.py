@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name="GnomieLibrary",
     version="0.1.0",
-    packages=find_packages(),
+    packages=find_packages(where="src"),
     package_dir={"": "src"}, 
     install_requires=["numpy"],  # Dependencies
     author="Shashank Rao",

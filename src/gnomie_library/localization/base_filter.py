@@ -13,7 +13,7 @@ class BaseFilter(ABC):
         pass
 
     @abstractmethod
-    def update(self, sensor_value: float) -> None:
+    def update(self) -> None:
         pass
 
     @abstractmethod
