@@ -5,6 +5,7 @@ from .localization import ParticleFilter, BaseFilter
 from .self_attention import SelfAttention
 from .sfm import EightPointAlgorithm
 from .surface_normal import DepthMapSurfaceNormalCalculator
+from .svd_solver import SVDSolver
 
 __all__ = [
     "CoordinateTransformer3D",
@@ -19,4 +20,5 @@ __all__ = [
     "SelfAttention",
     "EightPointAlgorithm",
     "DepthMapSurfaceNormalCalculator",
+    "SVDSolver",
 ]
