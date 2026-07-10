@@ -42,3 +42,17 @@ def test_icp_alignment_svd():
     # Assert exact rotation and translation recovery
     np.testing.assert_allclose(R_hat, R_true, atol=1e-5)
     np.testing.assert_allclose(t_hat, t_true, atol=1e-5)
+
+
+def test_svd_solver_validation():
+    # Linear regression invalid shape
+    with pytest.raises(ValueError):
+        SVDSolver.solve_linear_regression(np.random.rand(5,), np.random.rand(5,))
+    with pytest.raises(ValueError):
+        SVDSolver.solve_linear_regression(np.random.rand(5, 3), np.random.rand(6,))
+
+    # ICP alignment invalid shape/count
+    with pytest.raises(ValueError):
+        SVDSolver.compute_icp_alignment(np.random.rand(5, 3), np.random.rand(5, 2))
+    with pytest.raises(ValueError):
+        SVDSolver.compute_icp_alignment(np.random.rand(2, 3), np.random.rand(2, 3))

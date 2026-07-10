@@ -10,32 +10,54 @@ For each core point:
 3. For each of the core point, step 1 and 2 is repeated until all the points are classified.
 """
 
-from sklearn.datasets import make_moons
-import matplotlib.pyplot as plt
 import numpy as np
 
 class Point:
-  def __init__(self, x, y):
-    self.x = x
-    self.y = y
+  def __init__(self, *args):
+    """Initializes a Point. Can accept multiple coordinate values or a single iterable."""
+    if len(args) == 1 and hasattr(args[0], '__iter__') and not isinstance(args[0], (str, bytes)):
+      self.coords = np.asarray(args[0], dtype=np.float64)
+    else:
+      self.coords = np.asarray(args, dtype=np.float64)
     self.visited = False
+
+  @property
+  def x(self):
+    return self.coords[0] if len(self.coords) > 0 else None
+
+  @x.setter
+  def x(self, val):
+    if len(self.coords) > 0:
+      self.coords[0] = val
+
+  @property
+  def y(self):
+    return self.coords[1] if len(self.coords) > 1 else None
+
+  @y.setter
+  def y(self, val):
+    if len(self.coords) > 1:
+      self.coords[1] = val
 
 class Point_Utils:
   @staticmethod
   def convert_np_pts(pts):
-    return [Point(pt[0], pt[1]) for pt in pts]
+    pts = np.asarray(pts, dtype=np.float64)
+    if pts.ndim == 1:
+      return [Point(pts)]
+    return [Point(pt) for pt in pts]
 
   @staticmethod
   def convert_pts_to_np(pts):
-    return np.array([[pt.x, pt.y] for pt in pts])
+    return np.array([pt.coords for pt in pts])
 
   @staticmethod
   def euclidean_distance(pt1, pt2):
-    return np.sqrt((pt1.x - pt2.x)**2 + (pt1.y - pt2.y)**2)
+    return np.linalg.norm(pt1.coords - pt2.coords)
 
 class Cluster:
   def __init__(self, label):
-    self.pts = np.empty((0))
+    self.pts = np.empty((0), dtype=object)
     self.label = label
   
   def update_points(self, pt):
@@ -49,6 +71,10 @@ class Cluster:
   
 class DBSCAN:
   def __init__(self, eps, min_pts):
+    if eps <= 0:
+      raise ValueError(f"eps must be greater than 0, got {eps}")
+    if min_pts < 1:
+      raise ValueError(f"min_pts must be at least 1, got {min_pts}")
     self.eps = eps
     self.min_pts = min_pts
     self.clusters = []
@@ -62,26 +88,28 @@ class DBSCAN:
   def get_clusters(self):
     return self.clusters
 
-  def get_neighbors(self,pt, pts):
+  def get_neighbors(self, pt, pts):
     neighbors = []
-    
     for i, pt_n in enumerate(pts):
       dist = Point_Utils.euclidean_distance(pt, pt_n)
       if dist <= self.eps and dist > 0:
         neighbors.append(pt_n)
-
     return neighbors
     
   def process(self, pts):
-    noise_cluster = self.create_cluster(0)
-    pts = Point_Utils.convert_np_pts(pts)
+    pts_arr = np.asarray(pts, dtype=np.float64)
+    if pts_arr.size == 0:
+      return self.clusters
 
-    for i, pt in enumerate(pts):
+    noise_cluster = self.create_cluster(0)
+    pts_list = Point_Utils.convert_np_pts(pts_arr)
+
+    for i, pt in enumerate(pts_list):
       if pt.visited:
         continue
 
       pt.visited = True
-      neighbors = self.get_neighbors(pt, pts)
+      neighbors = self.get_neighbors(pt, pts_list)
       
       # Core point
       if len(neighbors) >= self.min_pts:
@@ -89,18 +117,12 @@ class DBSCAN:
         self.label += 1
         cluster.update_points(pt)
 
-        '''
-        Keep on the adding the core point's neighbors of neighbors of neighbors 
-        ... to the original neighbors array of core point.
-        Expand only for core points, and directly add the border point to the
-        cluster.
-        '''
         while neighbors:
           pt_n = neighbors.pop()
           if pt_n.visited:
             continue
           pt_n.visited = True
-          neighbors_n = self.get_neighbors(pt_n, pts)
+          neighbors_n = self.get_neighbors(pt_n, pts_list)
           
           # Update the neighbors of the core point
           if len(neighbors_n) >= self.min_pts:
@@ -113,8 +135,11 @@ class DBSCAN:
 
       else:
         noise_cluster.update_points(pt)
-        
+
 if __name__ == "__main__":
+  from sklearn.datasets import make_moons
+  import matplotlib.pyplot as plt
+
   X, _ = make_moons(n_samples=200, noise=0.05, random_state=42)
 
   db = DBSCAN(0.2, 5)

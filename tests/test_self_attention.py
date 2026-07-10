@@ -48,5 +48,24 @@ class TestSelfAttention(unittest.TestCase):
         for row in attention_weights:
             self.assertAlmostEqual(np.sum(row), 1.0)
 
+    def test_self_attention_batched(self):
+        # Batch size 2, sequence length 5, embed dim 4
+        queries = np.random.rand(2, 5, 4)
+        keys = np.random.rand(2, 5, 4)
+        values = np.random.rand(2, 5, 4)
+        
+        attention_module = SelfAttention(d_k=4, d_v=4)
+        output = attention_module(queries, keys, values)
+        self.assertEqual(output.shape, (2, 5, 4))
+
+    def test_self_attention_invalid_shapes(self):
+        attention_module = SelfAttention(d_k=4, d_v=4)
+        # Invalid dim count
+        with self.assertRaises(ValueError):
+            attention_module(np.array([1, 2, 3]), np.array([1, 2, 3]), np.array([1, 2, 3]))
+        # Size mismatch last axis
+        with self.assertRaises(ValueError):
+            attention_module(np.random.rand(5, 3), np.random.rand(5, 4), np.random.rand(5, 4))
+
 if __name__ == '__main__':
     unittest.main()

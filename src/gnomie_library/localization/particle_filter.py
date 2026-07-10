@@ -245,10 +245,15 @@ class ParticleFilter(BaseFilter):
         return x, y, theta
 
 if __name__ == "__main__":
+    import os
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.abspath(os.path.join(script_dir, "../../../"))
+    map_path = os.path.join(project_root, "data/test_data/map.png")
+
     # Load map outside the class
-    map_img = cv2.imread("map.png", 0)
+    map_img = cv2.imread(map_path, 0)
     if map_img is None:
-        raise ValueError("map.png not found")
+        raise ValueError(f"map.png not found at {map_path}")
 
     pf = ParticleFilter(map_img, num_particles=3000)
 

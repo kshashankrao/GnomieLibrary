@@ -37,7 +37,37 @@ class SelfAttention:
         Returns:
             np.ndarray: The attention output.
         """
-        attention_scores = np.matmul(queries, keys.T) / np.sqrt(self.d_k)
+        queries = np.asarray(queries, dtype=np.float64)
+        keys = np.asarray(keys, dtype=np.float64)
+        values = np.asarray(values, dtype=np.float64)
+
+        if queries.ndim < 2 or keys.ndim < 2 or values.ndim < 2:
+            raise ValueError(
+                f"queries, keys, and values must have at least 2 dimensions. "
+                f"Got shapes: queries={queries.shape}, keys={keys.shape}, values={values.shape}"
+            )
+
+        if queries.shape[-1] != self.d_k:
+            raise ValueError(f"queries last dimension must match d_k ({self.d_k}), got {queries.shape[-1]}")
+        if keys.shape[-1] != self.d_k:
+            raise ValueError(f"keys last dimension must match d_k ({self.d_k}), got {keys.shape[-1]}")
+        if values.shape[-1] != self.d_v:
+            raise ValueError(f"values last dimension must match d_v ({self.d_v}), got {values.shape[-1]}")
+
+        if queries.shape[:-2] != keys.shape[:-2] or queries.shape[:-2] != values.shape[:-2]:
+            raise ValueError(
+                f"Batch dimensions of queries, keys, and values must match. "
+                f"Got: queries={queries.shape[:-2]}, keys={keys.shape[:-2]}, values={values.shape[:-2]}"
+            )
+
+        if keys.shape[-2] != values.shape[-2]:
+            raise ValueError(
+                f"Sequence length of keys and values must match. "
+                f"Got: keys_seq_len={keys.shape[-2]}, values_seq_len={values.shape[-2]}"
+            )
+
+        keys_t = keys.swapaxes(-1, -2)
+        attention_scores = np.matmul(queries, keys_t) / np.sqrt(self.d_k)
         attention_probs = self._softmax(attention_scores)
         output = np.matmul(attention_probs, values)
         return output

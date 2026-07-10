@@ -1,6 +1,4 @@
-import torch
 import numpy as np
-import matplotlib.pyplot as plt
 
 class DepthMapSurfaceNormalCalculator:
     def __init__(self, camera_intrinsics, device="cpu", neighborhood_size=1):
@@ -9,68 +7,58 @@ class DepthMapSurfaceNormalCalculator:
 
         Args:
             camera_intrinsics (tuple): (fx, fy, cx, cy) camera intrinsics.
-            device (str): Device to use ("cpu" or "cuda").
+            device (str): Ignored parameter, kept for backward compatibility.
+            neighborhood_size (int): Size of the neighborhood to calculate tangents.
         """
+        if len(camera_intrinsics) != 4:
+            raise ValueError(f"camera_intrinsics must be a tuple/list of length 4 (fx, fy, cx, cy), got {camera_intrinsics}")
         self.fx, self.fy, self.cx, self.cy = camera_intrinsics
-        self.device = torch.device(device)
         self.neighborhood_size = neighborhood_size
-
 
     def depth_map_to_point_cloud(self, depth_map):
         """Converts a depth map to a 3D point cloud."""
+        if isinstance(depth_map, (str, bytes)):
+            raise TypeError(f"depth_map must be a numeric array-like object, got {type(depth_map)}")
+        depth_map = np.asarray(depth_map, dtype=np.float64)
+        if depth_map.ndim < 2:
+            raise ValueError(f"depth_map must have at least 2 dimensions, got shape {depth_map.shape}")
+
         height, width = depth_map.shape[-2:]
-        u = torch.arange(width, device=self.device).float().repeat(height, 1)
-        v = torch.arange(height, device=self.device).float().repeat(width, 1).t()
+        u = np.arange(width, dtype=np.float64)
+        v = np.arange(height, dtype=np.float64)
+        uu, vv = np.meshgrid(u, v)
+        
         z = depth_map
-        x = (u - self.cx) * z / self.fx
-        y = (v - self.cy) * z / self.fy
-        points = torch.stack((x, y, z), dim=-1)
+        x = (uu - self.cx) * z / self.fx
+        y = (vv - self.cy) * z / self.fy
+        points = np.stack((x, y, z), axis=-1)
         return points
 
     def calculate_surface_normals(self, depth_map):
         """Calculates surface normals from a depth map (vectorized)."""
+        if isinstance(depth_map, (str, bytes)):
+            raise TypeError(f"depth_map must be a numeric array-like object, got {type(depth_map)}")
+        depth_map = np.asarray(depth_map, dtype=np.float64)
+        if depth_map.ndim < 2:
+            raise ValueError(f"depth_map must have at least 2 dimensions, got shape {depth_map.shape}")
+
         points = self.depth_map_to_point_cloud(depth_map)
-        height, width, _ = points.shape[-3:]
-        normals = torch.zeros_like(points)
-        n = self.neighborhood_size
-
-        # Create shifted point clouds
-        # points_up = torch.roll(points, shifts=-n, dims=-3)
-        # points_down = torch.roll(points, shifts=n, dims=-3)
-        # points_left = torch.roll(points, shifts=n, dims=-2)
-        # points_right = torch.roll(points, shifts=-n, dims=-2)
-        # points_up_left = torch.roll(torch.roll(points, shifts=-n, dims=-3), shifts=n, dims=-2)
-        # points_up_right = torch.roll(torch.roll(points, shifts=-n, dims=-3), shifts=-n, dims=-2)
-        # points_down_left = torch.roll(torch.roll(points, shifts=n, dims=-3), shifts=n, dims=-2)
-        # points_down_right = torch.roll(torch.roll(points, shifts=n, dims=-3), shifts=-n, dims=-2)
-        # Calculate tangent vectors (central differences)
-        # tangent_horizontal = points_right - points_left
-        # tangent_vertical = points_up - points_down
-        # tangent_diag1 = points_up_right - points_down_left
-        # tangent_diag2 = points_up_left - points_down_right
-        # Average tangent vectors
-        #tangent_avg1 = torch.stack([tangent_horizontal, tangent_vertical, tangent_diag1, tangent_diag2], dim=0).mean(dim=0)
-        # Create a second average tangent that is more orthogonal.
-        #tangent_avg2 = torch.stack([tangent_vertical, tangent_diag1, tangent_diag2, tangent_horizontal], dim=0).mean(dim=0)
-        # Cross product (using averaged tangents)
-        # normals = torch.cross(tangent_avg1, tangent_avg2, dim=-1)
-
         
-        # Create shifted point clouds
-        points_u_plus = torch.roll(points, shifts=-1, dims=-2)
-        points_u_minus = torch.roll(points, shifts=1, dims=-2)
-        points_v_plus = torch.roll(points, shifts=-1, dims=-3)
-        points_v_minus = torch.roll(points, shifts=1, dims=-3)
+        # Shifted point clouds along width (axis=-2) and height (axis=-3)
+        points_u_plus = np.roll(points, shift=-1, axis=-2)
+        points_u_minus = np.roll(points, shift=1, axis=-2)
+        points_v_plus = np.roll(points, shift=-1, axis=-3)
+        points_v_minus = np.roll(points, shift=1, axis=-3)
 
         # Calculate the tangent with the neighbors
         tangent_u = points_u_plus - points_u_minus
         tangent_v = points_v_plus - points_v_minus
 
         # Cross product to get the perpendicular vector
-        normals = torch.cross(tangent_u, tangent_v, dim=-1)
+        normals = np.cross(tangent_u, tangent_v, axis=-1)
         
         # Normalize
-        norms = torch.norm(normals, dim=-1, keepdim=True)
-        normals = torch.where(norms > 0, normals / norms, torch.zeros_like(normals))
-
+        norms = np.linalg.norm(normals, axis=-1, keepdims=True)
+        normals = np.where(norms > 0, normals / norms, np.zeros_like(normals))
+        
         return normals

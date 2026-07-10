@@ -30,6 +30,16 @@ class SVDSolver:
             beta: Parameter vector of shape (K + 1,) if add_bias is True, else (K,).
                   If add_bias is True, beta[-1] represents the intercept c.
         """
+        X = np.asarray(X, dtype=np.float64)
+        y = np.asarray(y, dtype=np.float64)
+
+        if X.ndim != 2:
+            raise ValueError(f"X must be a 2D matrix, got shape {X.shape}")
+        if y.ndim not in (1, 2):
+            raise ValueError(f"y must be a 1D vector or 2D column vector, got shape {y.shape}")
+        if X.shape[0] != y.shape[0]:
+            raise ValueError(f"Number of samples in X ({X.shape[0]}) and y ({y.shape[0]}) must match.")
+
         if add_bias:
             n_samples = X.shape[0]
             X_design = np.hstack([X, np.ones((n_samples, 1))])
@@ -67,8 +77,15 @@ class SVDSolver:
             R: 3x3 Rotation matrix in SO(3).
             t: 3D translation vector of shape (3,).
         """
-        assert P.shape == Q.shape, "Source and Target point clouds must have identical shapes (N, 3)."
-        assert P.shape[1] == 3, "Point clouds must be 3-dimensional."
+        P = np.asarray(P, dtype=np.float64)
+        Q = np.asarray(Q, dtype=np.float64)
+
+        if P.shape != Q.shape:
+            raise ValueError(f"Source and Target point clouds must have identical shapes, got {P.shape} and {Q.shape}")
+        if P.ndim != 2 or P.shape[1] != 3:
+            raise ValueError(f"Point clouds must be 2D arrays with shape (N, 3), got {P.shape}")
+        if P.shape[0] < 3:
+            raise ValueError(f"Need at least 3 points to compute 3D rigid alignment, got {P.shape[0]}")
         
         # 1. Compute centroids
         p_centroid = np.mean(P, axis=0)

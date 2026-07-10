@@ -16,6 +16,7 @@ pip install -e .
 
 ## Available Modules
 
+- [Camera Models & Projection](camera.md)
 - [Coordinate Transformations](coordinate_transform.md)
 - [DBSCAN Clustering](dbscan.md)
 - [Inverse Perspective Mapping (IPM)](ipm.md)

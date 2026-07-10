@@ -41,6 +41,15 @@ def robust_inverse_perspective_mapping(image, src_points, dst_points, output_siz
                                        camera_matrix=None, dist_coeffs=None,
                                        ransac_iterations=1000, ransac_threshold=5.0):
     """Robust inverse perspective mapping with optional undistortion and RANSAC."""
+    src_points = np.asarray(src_points)
+    dst_points = np.asarray(dst_points)
+    
+    if src_points.shape != dst_points.shape:
+        raise ValueError(f"Source and destination points must have identical shapes, got {src_points.shape} and {dst_points.shape}")
+    if src_points.ndim != 2 or src_points.shape[1] != 2:
+        raise ValueError(f"Points must be of shape (N, 2), got {src_points.shape}")
+    if src_points.shape[0] < 4:
+        raise ValueError(f"At least 4 correspondence points are required for perspective mapping, got {src_points.shape[0]}")
 
     if camera_matrix is not None and dist_coeffs is not None:
         image = cv2.undistort(image, camera_matrix, dist_coeffs)
@@ -51,44 +60,56 @@ def robust_inverse_perspective_mapping(image, src_points, dst_points, output_siz
     M, mask = cv2.findHomography(src_points_float, dst_points_float, cv2.RANSAC, ransac_threshold, maxIters=ransac_iterations)
 
     if M is None:
-        print("Error: findHomography failed. Returning original image.")
-        return image
+        import warnings
+        warnings.warn("robust_inverse_perspective_mapping: findHomography failed. Returning a black image.")
+        if len(image.shape) == 3:
+            return np.zeros((output_size[1], output_size[0], image.shape[2]), dtype=image.dtype)
+        return np.zeros((output_size[1], output_size[0]), dtype=image.dtype)
 
     warped_image = cv2.warpPerspective(image, M, output_size)
     return warped_image
 
-# Example Usage:
-image = cv2.imread("/mnt/d/DeepLearning/GnomieLibrary/data/test_data/kitti.png")  # Replace with your image path
+if __name__ == "__main__":
+    import os
+    # Example Usage:
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.abspath(os.path.join(script_dir, "../../../"))
+    kitti_path = os.path.join(project_root, "data/test_data/kitti.png")
 
-if image is None:
-    print("Error: Could not load image.")
-else:
-    height, width, _ = image.shape
+    image = cv2.imread(kitti_path)
 
-    src_points = np.array([
-        [width * 0.4, height * 0.6],
-        [width * 0.6, height * 0.6],
-        [width * 0.9, height * 0.9],
-        [width * 0.1, height * 0.9]
-    ])
+    if image is None:
+        print(f"Error: Could not load image from {kitti_path}")
+    else:
+        height, width, _ = image.shape
 
-    dst_points = np.array([
-        [0, height],
-        [width, height],
-        [width, 0],
-        [0, 0]
-    ])
+        src_points = np.array([
+            [width * 0.4, height * 0.6],
+            [width * 0.6, height * 0.6],
+            [width * 0.9, height * 0.9],
+            [width * 0.1, height * 0.9]
+        ])
 
-    output_size = (width, height)
+        dst_points = np.array([
+            [0, height],
+            [width, height],
+            [width, 0],
+            [0, 0]
+        ])
 
-    camera_matrix = None
-    dist_coeffs = None
+        output_size = (width, height)
 
-    warped_image = robust_inverse_perspective_mapping(image, src_points, dst_points, output_size,
-                                                        camera_matrix, dist_coeffs)
+        camera_matrix = None
+        dist_coeffs = None
 
-    image_with_points = draw_src_points(image, src_points)
+        warped_image = robust_inverse_perspective_mapping(image, src_points, dst_points, output_size,
+                                                            camera_matrix, dist_coeffs)
 
-    cv2.imwrite("image.png", image_with_points)
-    cv2.imwrite("ipm.png", warped_image)
+        image_with_points = draw_src_points(image, src_points)
+
+        output_image_path = os.path.join(project_root, "data/test_data/image.png")
+        output_ipm_path = os.path.join(project_root, "data/test_data/ipm.png")
+
+        cv2.imwrite(output_image_path, image_with_points)
+        cv2.imwrite(output_ipm_path, warped_image)
     

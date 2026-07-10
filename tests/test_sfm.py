@@ -20,5 +20,22 @@ class TestEightPointAlgorithm(unittest.TestCase):
         # The smallest singular value should be close to 0
         self.assertAlmostEqual(s[-1], 0.0, places=5)
 
+    def test_eight_point_validation_and_defaults(self):
+        sfm = EightPointAlgorithm()
+        
+        # Mismatch shape
+        with self.assertRaises(ValueError):
+            sfm(np.random.rand(8, 2), np.random.rand(9, 2))
+            
+        # Fewer than 8 points
+        with self.assertRaises(ValueError):
+            sfm(np.random.rand(7, 2), np.random.rand(7, 2))
+            
+        # Automatic scale normalisation check (no exception)
+        pts1 = np.random.rand(8, 2) * 10
+        pts2 = np.random.rand(8, 2) * 10
+        F = sfm(pts1, pts2, M=None)
+        self.assertEqual(F.shape, (3, 3))
+
 if __name__ == '__main__':
     unittest.main()
